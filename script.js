@@ -157,23 +157,52 @@ function handleAnchorClick(e) {
 function handleFormSubmit(e) {
     e.preventDefault();
 
-    const formData = new FormData(contactForm);
-    const data = Object.fromEntries(formData);
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('.btn-submit');
+    const originalBtnContent = submitBtn.innerHTML;
 
-    // Show success message (in a real app, you'd send this to a server)
-    const submitBtn = contactForm.querySelector('.btn-submit');
-    const originalText = submitBtn.innerHTML;
+    // Show loading state
+    submitBtn.innerHTML = '<span>Sending...</span>';
+    submitBtn.disabled = true;
 
-    submitBtn.innerHTML = '<span>Message Sent! ✓</span>';
-    submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    fetch(form.action, {
+        method: form.method,
+        body: formData,
+        headers: {
+            'Accept': 'application/json'
+        }
+    }).then(response => {
+        if (response.ok) {
+            // Success
+            submitBtn.innerHTML = '<span>Message Sent! ✓</span>';
+            submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            form.reset();
 
-    setTimeout(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.style.background = '';
-        contactForm.reset();
-    }, 3000);
-
-    console.log('Form submitted:', data);
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                submitBtn.innerHTML = originalBtnContent;
+                submitBtn.style.background = '';
+                submitBtn.disabled = false;
+            }, 3000);
+        } else {
+            // Error from Formspree
+            response.json().then(data => {
+                if (Object.hasOwn(data, 'errors')) {
+                    alert(data["errors"].map(error => error["message"]).join(", "));
+                } else {
+                    alert("Oops! There was a problem submitting your form");
+                }
+                submitBtn.innerHTML = originalBtnContent;
+                submitBtn.disabled = false;
+            });
+        }
+    }).catch(error => {
+        // Network error
+        alert("Oops! There was a problem submitting your form");
+        submitBtn.innerHTML = originalBtnContent;
+        submitBtn.disabled = false;
+    });
 }
 
 // ===== Add Scroll Reveal Animation =====
